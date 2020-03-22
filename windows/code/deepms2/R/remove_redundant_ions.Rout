@@ -1,0 +1,55 @@
+
+R version 3.6.1 (2019-07-05) -- "Action of the Toes"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> lapply(2:3, function(charge) {
++   files = list.files(pattern = paste0('_charge', charge, '\\.ions\\.RData$'))
++   
++   extracted.ions = do.call(c, lapply(files, function(file) {
++     load(file)
++     extracted.ions
++   }))
++   
++   indexes = local({
++     scores = sapply(extracted.ions, function(x) -x$qvalue)
++     rank = order(scores, decreasing = TRUE)
++     dup = duplicated(sapply(extracted.ions[rank], function(x) x$peptide))
++     uni = rank[!dup]
++     filtered = uni # [scores[uni] <= 0.01]
++     indexes = filtered[order(filtered)]
++   })
++   
++   extracted.ions = extracted.ions[indexes]
++ 
++   writeLines(
++     rjson::toJSON(extracted.ions, indent = 2), 
++     sub('\\.RData$', '.json', files[1])
++   )
++ })
+[[1]]
+NULL
+
+[[2]]
+NULL
+
+> 
+> proc.time()
+   user  system elapsed 
+ 105.76    2.35  212.17 

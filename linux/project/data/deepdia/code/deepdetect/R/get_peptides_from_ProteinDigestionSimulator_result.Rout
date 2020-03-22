@@ -1,0 +1,42 @@
+
+R version 3.6.1 (2019-07-05) -- "Action of the Toes"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(readr)
+Warning message:
+package 'readr' was built under R version 3.6.2 
+> digested.file = list.files(pattern = '_digested.*\\.txt$')[1]
+> digested = read_delim(digested.file, '\t', escape_double = FALSE, trim_ws = TRUE)
+Parsed with column specification:
+cols(
+  Protein_Name = col_character(),
+  Sequence = col_character(),
+  Unique_ID = col_double(),
+  Monoisotopic_Mass = col_double(),
+  Predicted_NET = col_double(),
+  Tryptic_Name = col_character(),
+  pI = col_double(),
+  Hydrophobicity = col_double(),
+  LC_NET = col_double(),
+  SCX_NET = col_double()
+)
+> 
+> proteins = read.fasta(list.files(pattern = sub('_digested.*\\.txt$', '.fasta', digested.file)))
+Error in read.fasta(list.files(pattern = sub("_digested.*\\.txt$", ".fasta",  : 
+  could not find function "read.fasta"
+Execution halted

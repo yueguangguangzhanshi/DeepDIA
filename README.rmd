@@ -1,0 +1,222 @@
+---
+title: "deepDIA List"
+output: 
+  html_document:
+    number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Windows使用说明
+
+所需环境：
+
+* powershell解除权限(open powershell policy):`set-executionpolicy remotesigned`
+
+* python 3.6
+
+  pandas 0.19.2
+  
+  numpy 1.17
+  
+  tensorflow=1.11
+  
+  keras
+
+## Predict Library
+
+进入`data\\peptides\\predict`，选择需要的方法进行运行。
+
+### Fasta Library
+
+理论酶解Fasta后筛选80000条2/3 charge peptides以及iRT peptides进行Library预测。
+
+需要文件：
+
+* 搜库Fasta文件
+
+操作步骤：
+
+0. 检查`data\\models\\{irt,charge2,charge3,detectability}` 文件夹中的csv文件是否清空，可以运行`clean_model.bat`进行清除；
+   如果有新的模型请放入对应的models文件夹中；
+
+1. 将搜库Fasta进行Protein Digestion Simulator理论酶解，参数设置如下：
+  * Max Miss Cleavages: 2
+  * Minimum Residue Count: 7
+  * Maximun Fragment Mass: 6000
+  * Minimun Fragment Mass: 0
+  
+得到如下文件（以id.fasta为例）：
+
+  * id.txt
+  * id_digested_*.txt
+  
+2. 将上述得到的文件连fasta文件一起共3个文件复制到文件夹`data\\peptides\\predict`，运行`DeepDIA_prediction_detected_library_from_fasta.bat`，在library文件夹下得到如下文件，此文件可以导入Spectronaut建库进行后续DIA分析。
+
+  * prediction.library.csv
+
+### Report Library
+
+Spectronaut导出的PeptideReport.csv中（必要三列数据名为："PG.ProteinAccessions","PEP.StrippedSequence","PEP.NrOfMissedCleavages"）筛选80000条2/3 charge peptides以及iRT peptides进行Library预测。
+
+需要文件：
+
+* 搜库PeptideReport.csv文件
+
+操作步骤：
+
+0. 检查`data\\models\\{irt,charge2,charge3,detectability}`文件夹中的csv文件是否清空，可以运行`clean_model.bat`进行清除；
+   如果有新的模型请放入对应的models文件夹中；
+
+1. 将上述肽段文件连fasta文件一起共2个文件复制到文件夹`data\\peptides\\predict`，运行`DeepDIA_prediction_detected_library_from_report.bat`，在library文件夹下得到如下文件，此文件可以导入Spectronaut建库进行后续DIA分析。
+
+  * prediction.library.csv
+  
+### Peptides list Library
+
+将准备的肽段文件进行非可检测性建库。
+
+需要文件：
+
+* 准备好的 *.Peptides.csv 文件，其中蛋白表头为全小写的protein，肽段序列表头为全小写的sequence。
+
+操作步骤：
+
+0. 检查`data\\models\\{irt,charge2,charge3}`文件夹中的csv文件是否清空，可以运行`clean_model.bat`进行清除；
+   如果有新的模型请放入对应的models文件夹中；
+
+1. 将上述肽段文件复制到文件夹`data\\peptides\\predict`，运行`DeepDIA_prediction_library_from_peptides.bat`，在library文件夹下得到如下文件，此文件可以导入Spectronaut建库进行后续DIA分析。
+
+  * prediction.library.csv
+
+## Model Train
+
+进入data\\peptides\\train，选择需要的model文件夹进行建模。
+
+### Detectability Model
+
+进入Detectablibity文件夹
+
+需要文件：
+
+* 搜库Fasta文件
+* 搜库PeptideReport.csv文件
+* 搜库ProteinReport.csv文件
+
+操作步骤：
+
+1. 运行文件"train detect.ps1"，右键在powershell中运行，得到如下文件：
+  * x_excludeSingleHit_coverage25.fasta
+  * x_excludeSingleHit_coverage25.proteinAccession.txt
+  * x_excludeSingleHit_coverage25.detectability.csv
+
+2. 将`x_excludeSingleHit_coverage25.fasta`进行Protein Digestion Simulator理论酶解，参数设置如下：
+  * Max Miss Cleavages: 2
+  * Minimum Residue Count: 7
+  * Maximun Fragment Mass: 6000
+  * Minimun Fragment Mass: 0
+  
+得到如下文件：
+
+  * x_excludeSingleHit_coverage25_digested_Mass0to6000.txt
+  * x_excludeSingleHit_coverage25.txt
+
+3. 运行文件"train detect2.bat",得到training_0文件夹；
+
+4. 运行完成后,进入training_0\\models得到model（尾数字最大的hdf5文件，非last.hdf5）。
+
+### iRT Model
+
+进入irt文件夹
+
+需要文件：
+
+* 搜库FragmentReport.csv文件
+
+操作步骤：
+
+1. 运行文件"train irt.bat",得到model文件夹；
+
+2. 运行完成后得到model（尾数字最大的hdf5文件，非last.hdf5）。
+
+### Charge2/3 Model
+
+进入msms文件夹
+
+需要文件：
+
+* 搜库FragmentReport.csv文件
+
+操作步骤：
+
+1. 运行文件"train ms2.bat",得到model文件夹；
+
+2. 运行完成后得到model（尾数字最大的hdf5文件，非last.hdf5）。
+
+# Linux使用说明
+
+所需环境：
+
+* 安装pwsh：
+
+  `curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -`
+  
+  `curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list | sudo tee /etc/apt/sources.list.d/microsoft.list `
+  
+  `sudo apt-get update `
+  
+  `sudo apt-get install -y powershell`
+
+* python 3.6
+
+  pandas 0.19.2
+  
+  numpy 1.17
+  
+  tensorflow
+  
+  keras
+
+## Fasta Predict
+
+1. Choose Fasta File:
+
+上传蛋白物种Fasta文件;
+
+2. 点击"确认";
+
+3. 经过数小时后,获得Fasta建库Library.csv，可以导入Spectronaut。
+
+## Report Predict
+
+1. Choose Peptide csv File:
+
+上传SpectroMine搜库后得到的PeptideReport,格式为csv，必要三列数据名为："PG.ProteinAccessions","PEP.StrippedSequence","PEP.NrOfMissedCleavages"；
+
+2. 点击"确认";
+
+3. 经过数小时后,获得Report建库Library.csv，可以导入Spectronaut。
+
+## Model Train
+
+1. Choose Protein csv File:
+
+上传SpectroMine搜库后得到的ProteinReport,格式为csv;
+
+2. Choose Peptide csv File:
+
+上传SpectroMine搜库后得到的PeptideReport,格式为csv;
+
+3. Choose Fasta File:
+
+选择SpectroMine搜库的蛋白物种Fasta文件;
+
+4. Choose Fragment csv File:
+
+上传SpectroMine搜库后得到的ProteinFragment,格式为csv;
+
+5. 点击"确认";
+
+6. 经过数十小时后，可以在服务器生成Models。

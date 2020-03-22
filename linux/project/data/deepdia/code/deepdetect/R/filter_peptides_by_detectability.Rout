@@ -1,0 +1,82 @@
+
+R version 3.6.1 (2019-07-05) -- "Action of the Toes"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(readr)
+Warning message:
+package 'readr' was built under R version 3.6.2 
+> 
+> detectability.file = list.files(pattern = '\\.prediction\\.detectability\\.csv$')[1]
+> detectability = read_csv(detectability.file)
+Parsed with column specification:
+cols(
+  sequence = col_character(),
+  detectability = col_double()
+)
+> 
+> detectabilityThreshold = 0.5
+> 
+> peptides = read_csv(paste0(
++   './',
++   sub('\\.prediction\\.detectability\\.csv$', '.peptide.csv', detectability.file)
++ ))
+Parsed with column specification:
+cols(
+  protein = col_character(),
+  sequence = col_character(),
+  position = col_character(),
+  miss = col_double(),
+  start = col_double(),
+  end = col_double(),
+  nTerminal = col_character(),
+  cTerminal = col_character()
+)
+> 
+> peptides$detectability = detectability$detectability[match(
++   paste0(peptides$nTerminal, '.', peptides$sequence, '.', peptides$cTerminal), detectability$sequence
++ )]
+> 
+> peptides = subset(peptides, detectability >= detectabilityThreshold)
+> 
+> peptides = local({
++   rank = order(peptides$detectability, decreasing = TRUE)
++   filtered = duplicated(peptides$sequence[rank])
++   indexes = rank[!filtered]
++   indexes = sort(indexes)
++   peptides = peptides[indexes, ]
++ })
+> 
+> 
+> write.csv(
++   peptides,
++   paste0(
++     sub('\\.prediction\\.detectability\\.csv$', '', detectability.file),
++     '_detectability',
++     sprintf(
++       '%02d%s', as.integer(detectabilityThreshold / 0.01), 
++       gsub('^0(\\.00)?|0+$', '', sprintf('%f', detectabilityThreshold %% 0.01))
++     ),
++     '.peptide.csv'
++   ),
++   row.names = FALSE
++ )
+> 
+> 
+> proc.time()
+   user  system elapsed 
+  21.04    0.35   21.36 
