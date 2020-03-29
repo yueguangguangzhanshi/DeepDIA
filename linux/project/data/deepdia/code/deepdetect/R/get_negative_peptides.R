@@ -24,7 +24,7 @@ peptides.negative = local({
   )
 })
 
-peptides.negative$protein = sub('^[A-Za-z0-9]+\\|([A-Z0-9]+)\\|.*', '\\1', peptides.negative$protein)
+peptides.negative$protein = sub('^[A-Za-z0-9]+\\|([A-Z0-9-]+)\\|.*', '\\1', peptides.negative$protein)
 
 write.csv(
   peptides.negative, 

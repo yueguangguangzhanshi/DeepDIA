@@ -1,1 +1,1 @@
-Rscript loop_train.R
+Rscript train.R

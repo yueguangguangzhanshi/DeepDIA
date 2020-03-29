@@ -16,9 +16,9 @@ proteins = data.frame(
 lapply(c(detectability.file, negative.detectability.file), function(f) {
   peptides = read_csv(f)
   if (is.na(match(peptides$protein[1], proteins$accession)) &&
-      grepl('^[A-Za-z0-9_]+\\|([A-Za-z0-9_]+)\\|.*', proteins$accession[1]) &&
-      !grepl('^[A-Za-z0-9_]+\\|([A-Za-z0-9_]+)\\|.*', peptides$protein[1])) {
-    proteins$accession = sub('^[A-Za-z0-9_]+\\|([A-Za-z0-9_]+)\\|.*', '\\1', proteins$accession)
+      grepl('^[A-Za-z0-9_]+\\|([A-Za-z0-9_-]+)\\|.*', proteins$accession[1]) &&
+      !grepl('^[A-Za-z0-9_]+\\|([A-Za-z0-9_-]+)\\|.*', peptides$protein[1])) {
+    proteins$accession = sub('^[A-Za-z0-9_]+\\|([A-Za-z0-9_-]+)\\|.*', '\\1', proteins$accession)
   }
   
   cleavages = find.cleavageWindow(peptides, proteins)

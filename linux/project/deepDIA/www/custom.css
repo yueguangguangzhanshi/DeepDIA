@@ -1,0 +1,31 @@
+.main-header .logo {
+  #font-family: "Georgia", Times, "Times New Roman", serif;
+  font-weight: bold;
+  font-size: 14px;
+}
+.dt-buttons {
+	margin: -5px 0px 0px 20px;
+}
+
+.mylist {
+	margin-top: 40px;
+	margin-left: 5%;
+	margin-right: 5%;
+}
+.start_button {
+	float:right;
+	margin-right: 15%;
+}
+.hide {
+	display: none;
+}
+.show {
+	display: inherit;
+}
+.modal-lg {
+	width: 95%;
+}
+.modal-title {
+	font-family: 'Source Sans Pro','Helvetica Neue',Helvetica,Arial,sans-serif;
+	font-weight: bold;
+}

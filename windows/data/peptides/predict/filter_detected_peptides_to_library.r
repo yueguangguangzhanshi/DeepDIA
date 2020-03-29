@@ -1,8 +1,8 @@
 file_name<-list.files(pattern = '\\.peptide\\.csv$')
 file<-read.csv(file_name,1)
-
+file<-file[order(file["detectability"],decreasing = T),]
 if (nrow(file)>80000) {
-  index1<-sample(1:nrow(file),size = 80000)
+  index1<-1:80000
 }else{
   index1<-1:nrow(file)
 }

@@ -9,8 +9,6 @@ for(i in 1:length(metr_pkgs)){
 DeepDetectTrain<-function(ProteinFile,PeptideFile,FastaFile){
   source("../code/deepdetect/R/init.R")
   peptideReport = read_csv(PeptideFile)
-  peptideReport.HPRP = peptideReport[grepl('HPRP', peptideReport$R.FileName), ]
-  peptideReport = peptideReport[!grepl('HPRP', peptideReport$R.FileName), ]
   
   peptideQuantity = local({
     runs = unique(peptideReport$R.FileName)
@@ -76,37 +74,9 @@ DeepDetectTrain<-function(ProteinFile,PeptideFile,FastaFile){
     }))
     peptides
   })
+  
   peptides$detectability = pmax((5 + log10(peptides$relativeIntensity)) / 5 * 0.5, 0) + 0.5
   
-  if (nrow(peptideReport.HPRP)>0) {
-    peptides.HPRP = local({
-      peptideReport = peptideReport.HPRP
-      
-      sequence = setdiff(peptideReport.HPRP$PEP.StrippedSequence, peptides$sequence)
-      
-      rowIndexes = match(sequence, peptideReport$PEP.StrippedSequence)
-      missCleavages = peptideReport$PEP.NrOfMissedCleavages[rowIndexes]
-      qValue = peptideReport$PEP.QValue[rowIndexes]
-      protein = sapply(strsplit(peptideReport$PG.ProteinAccessions[rowIndexes], ';'), function(x) x[1])
-      start = sapply(strsplit(peptideReport$PEP.StartingPositions[rowIndexes], ';'), function(x) as.integer(gsub('^\\(([0-9]+)\\).*', '\\1', x[1])))
-      end = sapply(strsplit(peptideReport$PEP.EndingPositions[rowIndexes], ';'), function(x) as.integer(gsub('^\\(([0-9]+)\\).*', '\\1', x[1])))
-      
-      value = min(peptides$relativeIntensity) / 2
-      detectability = pmax((5 + log10(value)) / 5 * 0.5, 0) + 0.5
-      
-      data.frame(
-        protein = protein,
-        sequence = sequence,
-        start = start,
-        end = end,
-        missCleavages = missCleavages,
-        intensity = NA,
-        relativeIntensity = NA,
-        detectability = detectability,
-        stringsAsFactors = FALSE
-      )
-    })
-  }
   proteinReport = read_csv(ProteinFile)
   
   proteinAccession = local({
@@ -124,11 +94,6 @@ DeepDetectTrain<-function(ProteinFile,PeptideFile,FastaFile){
   )
   
   peptides = peptides[peptides$protein %in% proteinAccession, ]
-  
-  if (nrow(peptideReport.HPRP)>0) {
-    peptides.HPRP = peptides.HPRP[peptides.HPRP$protein %in% proteinAccession, ]
-    peptides = rbind(peptides, peptides.HPRP)
-  }
   
   peptides = local({
     proteinHit = table(peptides$protein)
@@ -189,15 +154,25 @@ DeepDetectTrain<-function(ProteinFile,PeptideFile,FastaFile){
   source("../../../code/deepdetect/R/get_cleavage_window.R")
   system("~/anaconda3/envs/tensorflow/bin/python ../../../code/deepdetect/py/train_hard_negative.py")
   if (file.exists("training_0/models/last_epoch.hdf5")) {
-    num<-str_split(dir("training_0/models/"),"\\.",simplify = T)[,1]%>%str_extract_all("\\d+",simplify = T)%>%max()
+    train_score = rjson::fromJSON(file = "./training.json")
+    x<-do.call(rbind,lapply(train_score$rounds,function(x){
+      unlist(x$evaluate)
+    }))%>%as.data.frame
+    if (nrow(x)==0) {
+      y<-0
+    }else{
+      x['score']=(x[,1]*(1/3))-(x[,2]*(1/3))+(x[,3]*(1/3))
+      y<-which(x[,4]==max(x[,4]))-1
+    }
+    num<-str_split(dir(paste0("training_",y,"/models/")),"\\.",simplify = T)[,1]%>%str_extract_all("\\d+",simplify = T)%>%max()
     DetectModel<-paste0("epoch_",num,".hdf5")
-    file.copy(paste0("training_0/models/",DetectModel),"../../models/detectability/models/")
+    file.copy(paste0("training_",y,"/models/",DetectModel),"../../models/detectability/models/")
     file.create("success.txt")
   }
-  
 }
 
 DeepMsmsTrain<-function(FragmentFile){
+  setwd("~/shiny-server/project/deepDIA")
   setwd(paste0("../data/deepdia/",modelid))
   fragmentReport = read_csv(FragmentFile)
   psm.indexes = which(sapply(1:nrow(fragmentReport), function(i) {
@@ -346,22 +321,45 @@ projects_list <- dbConnect(RSQLite::SQLite(), "../db/projects_list.db")
 project_status_table <- as.data.frame(dbGetQuery(projects_list, paste("SELECT * FROM Project WHERE user='","deepDIA","'",sep="")))
 dbDisconnect(projects_list)
 
-unfinished_train_projects <- project_status_table[which((project_status_table$status==0)&(project_status_table$name=="train")),]
-#unfinished_fastapredict_projects <- project_status_table[which((project_status_table$status==0)&(project_status_table$name=="fasta_predict")),]
+#在运行项目检查
+processing_projects<-project_status_table[which(project_status_table$status==2),]
+if (nrow(processing_projects)>0) {
+  cat("有正在运行的train任务","\n")
+  quit()
+}
 
-modelid<<-unfinished_train_projects[which(unfinished_train_projects$time==min(unfinished_train_projects$time)),"id"]
-#jobid<<-unfinished_fastapredict_projects[which(unfinished_fastapredict_projects$time==min(unfinished_fastapredict_projects$time)),"id"]
+tryCatch({
+  unfinished_train_projects <- project_status_table[which((project_status_table$status==0)&(project_status_table$name=="train")),]
+  #unfinished_fastapredict_projects <- project_status_table[which((project_status_table$status==0)&(project_status_table$name=="fasta_predict")),]
+  
+  modelid<<-unfinished_train_projects[which(unfinished_train_projects$time==min(unfinished_train_projects$time)),"id"]
+  #jobid<<-unfinished_fastapredict_projects[which(unfinished_fastapredict_projects$time==min(unfinished_fastapredict_projects$time)),"id"]
+},
+error=function(e){
+  cat(conditionMessage(e),"\n","没有train任务\n")
+  quit()
+}
+)
 
 if (length(modelid)>0) {
+  t1=proc.time()
   UpdateStatus(2,modelid)
   setwd(paste0("../data/deepdia/",modelid))
   ProteinFile<-list.files(pattern = "\\.ProteinReport\\.csv$")
   PeptideFile<-list.files(pattern = "\\.PeptideReport\\.csv$")
   FastaFile<-list.files("train/detect/",pattern = "\\.fasta$")
+  FragmentFile<-list.files(pattern = "\\.FragmentReport\\.csv$")
   DeepDetectTrain(ProteinFile,PeptideFile,FastaFile)
-  #DeepMsmsTrain()
+  DeepMsmsTrain(FragmentFile)
   setwd("~/shiny-server/project/deepDIA")
-  UpdateStatus(1,modelid)
+  if (file.exists(paste0("../data/deepdia/",modelid,"/train/msms/irt/success.txt"))) {
+    UpdateStatus(1,modelid)
+  }else{
+    UpdateStatus(3,modelid)
+  }
+  t2=proc.time()
+  t=t2-t1
+  print(paste0('执行时间：',t[3][[1]]/60/60,' hours'))
 }else{
-  break
+  stop
 }

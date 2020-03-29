@@ -55,38 +55,21 @@ DeepFastaPredict<-function(FastaFile){
     row.names = FALSE
   )
   setwd("../../models/detectability/")
-  system("~/anaconda3/envs/tensorflow/bin/python ../../../code/deepdetect/py/predict.py")
+  system("~/anaconda3/envs/tensorflow/bin/python ../../../code/deepdetect/py/predict.py",wait = T)
   source("../../../code/deepdetect/R/filter_peptides_by_detectability.R")
   
   file_name<-list.files(pattern = '(.)*detectability(.)*\\.peptide\\.csv$')
   file<-read.csv(file_name,1)
-  if (nrow(file)>50000) {
-    index1<-sample(1:nrow(file),size = 50000)
+  file<-file[order(file["detectability"],decreasing = T),]
+  if (nrow(file)>80000) {
+    #index1<-sample(1:nrow(file),size = 80000)
+    index1<-1:80000
   }else{
     index1<-1:nrow(file)
   }
   peptide_2charge<-file[index1,]
-  # peptide_2charge<-peptide_2charge[unlist(lapply(peptide_2charge[,"sequence"],FUN = function(x){nchar(as.vector(x))[[1]][1]}))<=50,]
-  # peptide_2charge = peptide_2charge[which(
-  #   !grepl('[^ACDEFGHIKLMNPQRSTVWY]', peptide_2charge$sequence)
-  # ), ]
-  
-  # index2<-sample(1:nrow(file),size = 80000)
-  # peptide_3charge<-file[index2,]
   peptide_3charge<-file[index1,]
-  # peptide_3charge<-peptide_3charge[unlist(lapply(peptide_3charge[,"sequence"],FUN = function(x){nchar(as.vector(x))[[1]][1]}))<=50,]
-  # peptide_3charge = peptide_3charge[which(
-  #   !grepl('[^ACDEFGHIKLMNPQRSTVWY]', peptide_3charge$sequence)
-  # ), ]
-  
-  # index3<-sample(1:nrow(file),size = 80000)
-  # peptide_irt<-file[index3,]
   peptide_irt<-file[index1,]
-  # peptide_irt<-peptide_irt[unlist(lapply(peptide_irt[,"sequence"],FUN = function(x){nchar(as.vector(x))[[1]][1]}))<=50,]
-  # peptide_irt = peptide_irt[which(
-  #   !grepl('[^ACDEFGHIKLMNPQRSTVWY]', peptide_irt$sequence)
-  # ), ]
-  
   write.csv(peptide_irt,paste0("../irt/Report.peptide.csv"),row.names =F)
   write.csv(peptide_2charge,paste0("../charge2/Report_charge2.peptide.csv"),row.names =F)
   write.csv(peptide_3charge,paste0("../charge3/Report_charge3.peptide.csv"),row.names =F)
@@ -244,6 +227,7 @@ DeepFastaPredict<-function(FastaFile){
     sub('\\.peptide\\.csv$', '.prediction.library.csv', file),
     row.names = FALSE
   )
+  system("zip -r Report.prediction.library.zip *.prediction.library.csv")
   file.create("success.txt")
 }
 
@@ -469,7 +453,7 @@ tryCatch({
   modelid<<-unfinished_fastapredict_projects[which(unfinished_fastapredict_projects$time==min(unfinished_fastapredict_projects$time)),"name"]%>%str_split("\\_")%>%.[[1]]%>%.[3]
 },
   error=function(e){
-    cat(conditionMessage(e),"\n","没有fasta预测任务")
+    cat(conditionMessage(e),"\n","没有fasta预测任务\n")
     quit()
     }
   #finally={print("有fasta预测任务")}
@@ -487,10 +471,14 @@ if (length(modelid)>0&length(jobid)>0) {
   FastaFile<-list.files(pattern = "\\.fasta$")
   DeepFastaPredict(FastaFile)
   setwd("~/shiny-server/project/deepDIA")
-  UpdateStatus(1,jobid)
+  if (file.exists(paste0("../data/deepdia/",modelid,"/library/",jobid,"/success.txt"))) {
+    UpdateStatus(1,jobid)
+  }else{
+    UpdateStatus(3,jobid) 
+  }
   t2=proc.time()
   t=t2-t1
-  print(paste0('执行时间：',t[3][[1]]/60,' min'))
+  print(paste0('执行时间：',t[3][[1]]/60/60,' hours'))
 }else{
-  break
+  stop
 }
