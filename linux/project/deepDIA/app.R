@@ -71,10 +71,14 @@ server <- function(input, output, session) {
       tabsetPanel(type = "tabs",id="tabs",
                   tabPanel("Model Train",
                            br(),
-                           p("请将spectronaut搜库结果以如下名称命名："),
-                           p("*.ProteinReport.csv , *.PeptideReport.csv , *.FragmentReport.csv"),
-                           p("例如HeLa.ProteinReport.csv , HeLa.PeptideReport.csv , HeLa.FragmentReport.csv"),
-                           p("然后进行zip压缩，上传至下面栏框。"),
+                           helpText("注意:请将spectronaut搜库结果以如下名称命名：",
+                                    "*.ProteinReport.csv , *.PeptideReport.csv , *.FragmentReport.csv",
+                                    "例如HeLa.ProteinReport.csv , HeLa.PeptideReport.csv , HeLa.FragmentReport.csv",
+                                    "然后进行zip压缩，上传至下面栏框。",style="color:black;"),
+                           # p("请将spectronaut搜库结果以如下名称命名："),
+                           # p("*.ProteinReport.csv , *.PeptideReport.csv , *.FragmentReport.csv"),
+                           # p("例如HeLa.ProteinReport.csv , HeLa.PeptideReport.csv , HeLa.FragmentReport.csv"),
+                           # p("然后进行zip压缩，上传至下面栏框。"),
                            fileInput("TrainProtein", "Upload your Train File",
                                      multiple = FALSE,
                                      accept = c(".zip")),
@@ -201,18 +205,51 @@ server <- function(input, output, session) {
       ))
     }else{
       if (file.exists(paste0("../data/deepdia/",input$TrainId1,"/train/msms/irt/success.txt"))) {
-        jobid<<-myFun(1)
+        shinyjs::removeCssClass(id = "id-progress-grey-out", class = "hide")
+        shinyjs::addCssClass(id = "id-progress-grey-out", class = "show")
+        runjs('$(\'.progress-grey-out\').css(\'height\',$(document).height()); $(\'.progress-grey-out\').css(\'width\',$(document).width()*1.2);')
+        withProgress(message = '提交分析...', style = "notification", value = 0.01, {
+          setProgress(1/4, message = '开始检查文件...')
+          jobid<<-myFun(1)
+          dir.create(paste0("../data/deepdia/",input$TrainId1,"/library/",jobid))
+          projects_list <- dbConnect(RSQLite::SQLite(), "../db/projects_list.db", flags = SQLITE_RWC)
+          dbSendQuery(projects_list, paste0("INSERT INTO Project VALUES ('", jobid, "','", paste0("fasta_predict_",trimws(input$TrainId1)), "', '", "deepDIA", "', '0', '", as.character(Sys.time()),"')"))
+          dbDisconnect(projects_list)
+          file.copy(input$PredictFasta$datapath,paste0("../data/deepdia/",input$TrainId1,"/library/",jobid))
+          setwd(paste0("../data/deepdia/",input$TrainId1,"/library/",jobid))
+          setProgress(2/3, message = '创建分布式任务...')
+          seq <- seqinr::read.fasta("0.fasta",seqtype="AA")
+          annotation <- getAnnot(seq)
+          sequence <- getSequence(seq)
+          index<-list()
+          splitlength<-as.integer(length(annotation)/8)
+          for (i in 1:7) {
+            index[[i]]<-(splitlength*(i-1)+1):(i*splitlength)
+          }
+          index[[8]]<-(7*splitlength):length(annotation)
+          lapply(1:8, function(x){
+            dir.create(paste0("test",x))
+            write.fasta(sequence[index[[x]]], annotation[index[[x]]], paste0('test',x,'.fasta'))
+            system(paste("mv",paste0('test',x,'.fasta'),paste0("test",x)))
+            if (dir.exists(paste0("../../models",x))) {
+              next
+            }else{
+              dir.create(paste0("../../models",x))
+              system(paste("cp -rf","../../models/*",paste0("../../models",x)))
+            }
+          })
+          setProgress(1, message = '任务创建成功，请保留您的建库ID！')
+          setwd("~/shiny-server/project/deepDIA/")
+        })
+        shinyjs::removeCssClass(id = "id-progress-grey-out", class = "show")
+        shinyjs::addCssClass(id = "id-progress-grey-out", class = "hide")
+        updateTabItems(session, "tabs", "Fasta Predict")
         showModal(modalDialog(
           title = "Important message",
           paste0("This is your Predict LibraryTask ID: ",jobid),
           easyClose = FALSE,
           footer = NULL
         ))
-        dir.create(paste0("../data/deepdia/",input$TrainId1,"/library/",jobid))
-        projects_list <- dbConnect(RSQLite::SQLite(), "../db/projects_list.db", flags = SQLITE_RWC)
-        dbSendQuery(projects_list, paste0("INSERT INTO Project VALUES ('", jobid, "','", paste0("fasta_predict_",trimws(input$TrainId1)), "', '", "deepDIA", "', '0', '", as.character(Sys.time()),"')"))
-        dbDisconnect(projects_list)
-        file.copy(input$PredictFasta$datapath,paste0("../data/deepdia/",input$TrainId1,"/library/",jobid))
       }else{
         if (input$TrainId1 %in% dir("../data/deepdia/")) {
           showModal(modalDialog(
