@@ -1,14 +1,31 @@
-library(readr)
-digested.file = list.files(pattern = '_digested.*\\.txt$')[1]
-digested = read_delim(digested.file, '\t', escape_double = FALSE, trim_ws = TRUE)
+library(cleaver)
+library(dplyr)
+library(data.table)
+library(tibble)
+fasta.file<-list.files(pattern = '*.fasta$')
+proteins = read.fasta(fasta.file)
+fasta<-list()
+for (i in 1:length(proteins)) {
+  fasta[[i]]<-sapply(proteins[[i]]$sequence,FUN = function(x)cleave(x,"trypsin",missedCleavages=0))
+  names(fasta[[i]])<-proteins[[i]]$name
+}
 
-proteins = read.fasta(list.files(pattern = sub('_digested.*\\.txt$', '.fasta', digested.file)))
+fasta2<-lapply(fasta, function(x){
+  data<-as.data.frame(x,stringsAsFactors=F,check.names=F)
+  data[,2]<-colnames(data)[1]
+  return(data)
+})
+df <- rbindlist(fasta2,use.names=FALSE)%>%.[,c(2,1)]
+names(df)<-c("Protein_Name","Sequence")
+df<-filter(df,nchar(Sequence)>7&nchar(Sequence)<=50)%>%add_column(miss=0)
 
+#write.table(df,sub('\\.fasta$', '_digested\\.txt', fasta.file),row.names = FALSE,sep = "\t")
+
+digested=df
 peptides = data.frame(
   protein = digested$Protein_Name,
   sequence = digested$Sequence,
-  position = digested$Tryptic_Name,
-  miss = as.integer(sub('^t[0-9]+\\.([0-9]+).*', '\\1', digested$Tryptic_Name)) - 1,
+  miss = digested$miss,
   stringsAsFactors = FALSE
 )
 
@@ -29,10 +46,8 @@ peptides = peptides[which(
     !grepl('[^_ACDEFGHIKLMNPQRSTVWY]', peptides$cTerminal)
 ), ]
 
-peptides = peptides[nchar(peptides$sequence) <= 50, ]
-
 write.csv(
   peptides,
-  sub('_digested(.*)\\.txt$', '\\1.peptide.csv', digested.file),
+  sub('(.*)\\.fasta$', '\\1.peptide.csv', fasta.file),
   row.names = FALSE
 )

@@ -39,7 +39,6 @@ Parsed with column specification:
 cols(
   protein = col_character(),
   sequence = col_character(),
-  position = col_character(),
   miss = col_double(),
   start = col_double(),
   end = col_double(),
@@ -79,4 +78,4 @@ cols(
 > 
 > proc.time()
    user  system elapsed 
-  12.92    0.23   13.12 
+  17.20    0.43   17.73 
