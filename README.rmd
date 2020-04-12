@@ -23,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
   
   tensorflow=1.11
   
-  keras
+  keras=2.2.4
 
 ## Predict Library
 
@@ -31,7 +31,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Fasta Library
 
-理论酶解Fasta后筛选80000条2/3 charge peptides以及iRT peptides进行Library预测。
+理论酶解Fasta得到2/3 charge peptides以及iRT peptides进行Library预测。
 
 需要文件：
 
@@ -175,9 +175,23 @@ Spectronaut导出的PeptideReport.csv中（必要三列数据名为："PG.Protei
   
   numpy 1.17
   
-  tensorflow
+  tensorflow=1.11
   
-  keras
+  keras=2.2.4
+  
+## Model Train
+
+1. Upload your Train File:
+
+将SpectroMine搜库后得到的ProteinReport.csv,PeptideReport.csv,ProteinFragment.csv解压得到zip文件，上传zip文件。
+
+2. Choose Fasta:
+
+选择SpectroMine搜库的蛋白物种Fasta文件;
+
+3. 点击"确认";
+
+4. 经过数小时后，可以在服务器生成Models。
 
 ## Fasta Predict
 
@@ -185,38 +199,19 @@ Spectronaut导出的PeptideReport.csv中（必要三列数据名为："PG.Protei
 
 上传蛋白物种Fasta文件;
 
-2. 点击"确认";
+2. 输入Model ID;
 
-3. 经过数小时后,获得Fasta建库Library.csv，可以导入Spectronaut。
+3. 点击"确认";
 
-## Report Predict
+4. 经过数小时后,获得Fasta建库Library.csv，可以导入Spectronaut。
 
-1. Choose Peptide csv File:
+## Library Download
 
-上传SpectroMine搜库后得到的PeptideReport,格式为csv，必要三列数据名为："PG.ProteinAccessions","PEP.StrippedSequence","PEP.NrOfMissedCleavages"；
+1. 输入Train Models Task ID;
 
-2. 点击"确认";
+2. 输入Library Task ID;
 
-3. 经过数小时后,获得Report建库Library.csv，可以导入Spectronaut。
+3. 点击"确认";若ID正确弹出Download Library按钮；
 
-## Model Train
+4. 点击"Download Library"，下载Library压缩包。
 
-1. Choose Protein csv File:
-
-上传SpectroMine搜库后得到的ProteinReport,格式为csv;
-
-2. Choose Peptide csv File:
-
-上传SpectroMine搜库后得到的PeptideReport,格式为csv;
-
-3. Choose Fasta File:
-
-选择SpectroMine搜库的蛋白物种Fasta文件;
-
-4. Choose Fragment csv File:
-
-上传SpectroMine搜库后得到的ProteinFragment,格式为csv;
-
-5. 点击"确认";
-
-6. 经过数十小时后，可以在服务器生成Models。

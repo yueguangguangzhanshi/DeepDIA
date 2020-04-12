@@ -39,6 +39,7 @@ ui<-fluidPage(
         tabPanel("网站说明",
                  fluidRow(style = 'margin:2em 2em 2em 0;',uiOutput("explain_en")),
                  fluidRow(style = 'margin:2em 2em 2em 0;',uiOutput("explain_ch"))
+                 #img(src="../data/DIA-ApexRT_8w.png",width="1280",height="1280")
                  ),
         tabPanel("建模预测分析",
                  fluidRow(style = 'margin-bottom: 80px;',
@@ -232,7 +233,7 @@ server <- function(input, output, session) {
             write.fasta(sequence[index[[x]]], annotation[index[[x]]], paste0('test',x,'.fasta'))
             system(paste("mv",paste0('test',x,'.fasta'),paste0("test",x)))
             if (dir.exists(paste0("../../models",x))) {
-              next
+              print("file exist")
             }else{
               dir.create(paste0("../../models",x))
               system(paste("cp -rf","../../models/*",paste0("../../models",x)))
